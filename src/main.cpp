@@ -1,8 +1,6 @@
 #include "M5Atom.h"
 #include <math.h>
 
-// #define PI 3.14159265
-
 // sudo chmod a+rw /dev/ttyUSB0
 
 float acc0[] = {0.0f, 0.0f, 0.0f};
