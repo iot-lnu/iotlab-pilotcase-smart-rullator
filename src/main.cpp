@@ -1,19 +1,19 @@
 #include "M5Atom.h"
 #include <math.h>
-// #include <M5Stack.h>
 
-#define PI 3.14159265
+// #define PI 3.14159265
 
 // sudo chmod a+rw /dev/ttyUSB0
 
 float acc0[] = {0.0f, 0.0f, 0.0f};
 float acc[] = {0.0f, 0.0f, 0.0f};
-float prevAcc[] = {0.01f, 0.0f, 0.0f};
+float prevAcc[] = {0.0f, 0.0f, 0.0f};
 
+unsigned long lastTime = 0;
 int vectorCounter = 0;
 float vectors[] = {0.0f, 0.0f, 0.0f};
 
-
+int accelerations = 0;
 int steps = 0;
 
 float dotProduct(float A[], float B[], int n) {
@@ -61,6 +61,8 @@ void setup(){
   acc0[0] = acc[0];
   acc0[1] = acc[1];
   acc0[2] = acc[2]; 
+
+  lastTime = millis();
 }
 
 void loop() {
@@ -68,19 +70,48 @@ void loop() {
   acc[0] = acc[0] - acc0[0];
   acc[1] = acc[1] - acc0[1];
   acc[2] = acc[2] - acc0[2];
-  // Serial.printf("Acceleration: X: %f G, Y: %f G, Z: %f G\n", acc[0], acc[1], acc[2]);   
+  
+  if (magnitude(acc, 3) > 0.022) {
+    vectors[0] = acc[0];
+    vectors[1] = acc[1];
+    vectors[2] = acc[2];
+    vectorCounter++;
 
-  if (magnitude(acc, 3) > 0.1) {
-    // float projection[3] = {0.0f, 0.0f, 0.0f};
-    // projectVector(prevAcc, acc, 3, projection);
-    
-    if (round(angleBetweenVectors(acc, prevAcc, 3)) > 150) {
-      prevAcc[0] = acc[0];
-      prevAcc[1] = acc[1];
-      prevAcc[2] = acc[2];    
-      steps++;
-      Serial.printf("%u steps\n", steps);  
-      delay(100);            
+    if (millis() - lastTime > 100) {
+      
+      vectors[0] = vectors[0] / vectorCounter;
+      vectors[1] = vectors[1] / vectorCounter;
+      vectors[2] = vectors[2] / vectorCounter;
+
+      if (magnitude(prevAcc, 3) == 0.0f) {
+        prevAcc[0] = vectors[0];
+        prevAcc[1] = vectors[1];
+        prevAcc[2] = vectors[2];    
+      }
+
+      float projection[3] = {0.0f, 0.0f, 0.0f};
+      projectVector(prevAcc, acc, 3, projection);
+
+      unsigned int angle = round(angleBetweenVectors(acc, prevAcc, 3));
+      float projectionMag = magnitude(projection, 3);
+      
+      if (angle > 90 && projectionMag > 0.014) {
+        prevAcc[0] = acc[0];
+        prevAcc[1] = acc[1];
+        prevAcc[2] = acc[2];   
+
+        accelerations++;
+        steps = accelerations / 2;
+
+        if (accelerations % 2 == 0) {
+          Serial.printf("%u steps\n", steps);
+        }
+      
+        delay(200);            
+      }
+
+      vectorCounter = 0;
+      lastTime = millis();
     }
   }
 }
